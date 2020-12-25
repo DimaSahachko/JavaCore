@@ -1,5 +1,9 @@
 package main.java.com.DimaSahachko.javacore.modul1_4;
+<<<<<<< HEAD
 /*In order to provide the order of threads execution join() method is used*/
+=======
+/*Для обеспечения порядка исполнения потоков использован метод join()*/
+>>>>>>> bd988eaedf07cb5aecb7865c59868d746b174dbe
 
 class Foo {
 	public void first() {
