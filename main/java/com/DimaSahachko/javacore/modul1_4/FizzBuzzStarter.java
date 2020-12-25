@@ -1,107 +1,127 @@
 package main.java.com.DimaSahachko.javacore.modul1_4;
-
-import java.util.concurrent.atomic.AtomicInteger;
-<<<<<<< HEAD
-/*At the outset I inform that code works incorrect in some cases: the last figure not always prints(figure that equals N)
- * The main idea is: we have a shared resource few threads have access to. And every of these threads increments a shared variable. In order to
- * provide visibility and correctly performance I've used atomic class AtomicInteger.
-=======
-/*Сразу обозначу, что код работает некорректно в некоторых ситуациях, а именно: не всегда печатется вывод последнего числа (которое
- * равно N). 
- * Основная идея в том, что у нас есть один общий ресурс, доступ к которому есть у нескольких потоков. Каждый из этих потоков инкрементит общую
- * переменную. В целях ее видимости всем потокам и корректности работы использован атомарный класс AtomicInteger
->>>>>>> bd988eaedf07cb5aecb7865c59868d746b174dbe
- */
-
-class FizzBuzz {
-	int n;
-	AtomicInteger count = new AtomicInteger(1);
-	
-	public FizzBuzz(int n) {
-		this.n = n;
-	}
-<<<<<<< HEAD
-	/*Every of the following methods checks out truthfulness of certain condition and if this condition is false we call return. In true case this
-	 * method prints output and increment count variable*/
-=======
-	/*Каждый из последующих методов проверяет истинность некоего заданного условия и в случае false завершается, а в случае true печатает вывод
-	 * и увеличивает переменную count*/
->>>>>>> bd988eaedf07cb5aecb7865c59868d746b174dbe
-	public synchronized void fizz() {
-		if( (((count.get() % 5) == 0) && ((count.get() % 3) == 0)) ||  (count.get() % 3) != 0  ) {
-			return;
-		}
-		if(count.get() == n) {
-			System.out.print("fizz.");
-			return;
-		} else {
-			System.out.print("fizz, ");
-			count.getAndIncrement();
-		}
-	}
-	public synchronized void buzz() {
-		if( (((count.get() % 5) == 0) && ((count.get() % 3) == 0)) ||  (count.get() % 5) != 0  ) {
-			return;
-		}
-		if(count.get() == n) {
-			System.out.print("buzz.");
-			return;
-		} else {
-			System.out.print("buzz, ");
-			count.getAndIncrement();
-		}
-	}
-	
-	public synchronized void fizzBuzz() {
-		if( ((count.get() % 5) != 0) || ((count.get() % 3) != 0)) {
-			return;
-		}
-		if(count.get() == n) {
-			System.out.print("fizzbuzz.");
-			return;
-		} else {
-			System.out.print("fizzbuzz, ");
-			count.getAndIncrement();
-		}
-	}
-	
-	public synchronized void number() {
-		if(((count.get() % 5) == 0) || ((count.get() % 3) == 0)) {
-			return;
-		}
-		if(count.get() == n) {
-			System.out.print(count.get() + ".");
-			return;
-		} else {
-			System.out.print(count.get() + ", ");
-			count.getAndIncrement();
-		}
-	}
-}
-
+import java.util.concurrent.locks.*;
+import java.util.concurrent.atomic.*;
+import java.util.concurrent.*;
 public class FizzBuzzStarter {
 
 	public static void main(String[] args) {
 		FizzBuzz fb = new FizzBuzz(15);
-		Thread t1 = new Thread(() -> {
-			while(fb.count.get() < fb.n)
-				fb.fizz();
-		});
-		Thread t2 = new Thread(() -> {
-			while(fb.count.get() < fb.n)
-			fb.buzz();
-		});
-		Thread t3 = new Thread(() -> {
-			while(fb.count.get() < fb.n)
-			fb.fizzBuzz();
-		});
-		Thread t4 = new Thread(() -> {
-			while(fb.count.get() < fb.n)
-			fb.number();
-		});
-		t1.start();
-		t2.start();
-		t3.start();
-		t4.start();
+		CompletableFuture.runAsync(() -> fb.fizz());
+		CompletableFuture.runAsync(() -> fb.buzz());
+		CompletableFuture.runAsync(() -> fb.fizzBuzz());
+		CompletableFuture.runAsync(() -> fb.number());
+	}
+
+}
+class FizzBuzz {
+	Lock lock = new ReentrantLock();
+	Condition cond = lock.newCondition();
+	int n;
+	AtomicInteger count = new AtomicInteger(1);
+	
+	FizzBuzz(int n) {
+		this.n = n;
+	}
+	public  void fizz() {
+		while(count.get() <= n) { //we specify how long we are going to perform this method
+			lock.lock();  //try to acquire lock;
+		try {
+			while( (((count.get() % 5) == 0) && ((count.get() % 3) == 0)) ||  (count.get() % 3) != 0 ) { //if the current value of the 'count' doesn't satisfy us
+				if(count.get() == n) { //check if it is the last iteration of this method and if it is --->
+					return; //return this method in order not to wait forever
+				}
+				cond.await(); //if it is not the last iteration of the method we are going to be waiting for signal()
+			}
+			if(count.get() == n) { //our useful work
+				System.out.print("fizz.");
+				return; //if it the last iteration return the method
+			} else {
+				System.out.print("fizz, ");
+				count.getAndIncrement();
+			}
+		} catch(InterruptedException e) {
+				System.out.println("exc");
+		} finally {
+			cond.signalAll(); //after performing the method and incrementing the 'count', we are signaling to others to awake them
+			lock.unlock();
+		}
+		}
+	}
+	public  void buzz() {
+		while(count.get() <= n) {
+		lock.lock();
+		try {
+			while( (((count.get() % 5) == 0) && ((count.get() % 3) == 0)) ||  (count.get() % 5) != 0 ) {
+				if(count.get() == n) {
+					return;
+				}
+				cond.await();
+			}
+			if(count.get() == n) {
+				System.out.print("buzz.");
+				return;
+			} else {
+				System.out.print("buzz, ");
+				count.getAndIncrement();
+			}
+		} catch(InterruptedException e) {
+				System.out.println("exc");
+		} finally {
+			cond.signalAll();
+			lock.unlock();
+		}
+		}
+	}
+	
+	public  void fizzBuzz() {
+		while(count.get() <= n) {
+		lock.lock();
+		try {
+			while( ((count.get() % 5) != 0) || ((count.get() % 3) != 0))  {
+				if(count.get() == n) {
+					return;
+				}
+				cond.await();
+			}
+			if(count.get() == n) {
+				System.out.print("fizzBuzz.");
+				return;
+			} else {
+				System.out.print("fizzBuzz, ");
+				count.getAndIncrement();
+			}
+		} catch(InterruptedException e) {
+				System.out.println("exc");
+		} finally {
+			cond.signalAll();
+			lock.unlock();
+		}
+		}
+	}
+	
+	public  void number() {
+		while(count.get() <= n) {
+		lock.lock();
+		try {
+			while( ((count.get() % 5) == 0) || ((count.get() % 3) == 0))  {
+				if(count.get() == n) {
+					return;
+				}
+				cond.await();
+			}
+			if(count.get() == n) {
+				System.out.print(count.get() + ".");
+				return;
+			} else {
+				System.out.print(count.get() + ", ");
+				count.getAndIncrement();
+			}
+		} catch(InterruptedException e) {
+				System.out.println("exc");
+		} finally {
+			cond.signalAll();
+			lock.unlock();
+		}
+		}
 	}
 }
