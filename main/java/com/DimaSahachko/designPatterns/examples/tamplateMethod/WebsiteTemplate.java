@@ -1,0 +1,10 @@
+package main.java.com.DimaSahachko.designPatterns.examples.tamplateMethod;
+
+public abstract class WebsiteTemplate {
+	public void showPage() {
+		System.out.println("Header");
+		showPageContent();
+		System.out.println("Footer");
+	}
+	public abstract void showPageContent(); 
+}
